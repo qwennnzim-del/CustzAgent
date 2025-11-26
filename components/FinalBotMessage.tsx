@@ -88,18 +88,18 @@ const ActionButton: React.FC<{ onClick: () => void; children: React.ReactNode; d
 
 const ArtifactModal: React.FC<{ code: string; onClose: () => void }> = ({ code, onClose }) => {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-             <div className="bg-[#1A1A1A] w-full h-[85vh] max-w-6xl rounded-2xl border border-gray-700 shadow-2xl flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700 bg-[#121212]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 animate-fade-in">
+             <div className="bg-[#1A1A1A] w-full h-[85vh] sm:h-[90vh] max-w-6xl rounded-xl sm:rounded-2xl border border-gray-700 shadow-2xl flex flex-col overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3 border-b border-gray-700 bg-[#121212]">
                     <div className="flex items-center gap-2">
                         <span className="flex gap-1.5">
-                            <span className="w-3 h-3 rounded-full bg-red-500/80"></span>
-                            <span className="w-3 h-3 rounded-full bg-yellow-500/80"></span>
-                            <span className="w-3 h-3 rounded-full bg-green-500/80"></span>
+                            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500/80"></span>
+                            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-500/80"></span>
+                            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500/80"></span>
                         </span>
-                        <span className="ml-4 text-xs font-mono text-gray-400 uppercase tracking-wider">Custz Artifact Preview</span>
+                        <span className="ml-3 text-[10px] sm:text-xs font-mono text-gray-400 uppercase tracking-wider">Custz Artifact Preview</span>
                     </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+                    <button onClick={onClose} className="p-1 text-gray-400 hover:text-white transition-colors">
                         <CloseIcon className="w-5 h-5" />
                     </button>
                 </div>
@@ -348,7 +348,7 @@ const FinalBotMessage: React.FC<FinalBotMessageProps> = ({ message, onStageImage
   return (
     <div className="flex gap-4 items-start my-6 relative animate-fade-in-up">
       <CusstzzLogo className="w-8 h-8 rounded-full flex-shrink-0 mt-2" />
-      <div className="w-full max-w-xl">
+      <div className="w-full max-w-xl min-w-0"> {/* min-w-0 is key for text truncation flex child */}
         {/* Updated Name Header with Status Text */}
         <div className="flex items-center gap-2 mb-1">
             <p className="font-medium text-gray-200">{botDisplayName}</p>
@@ -389,9 +389,9 @@ const FinalBotMessage: React.FC<FinalBotMessageProps> = ({ message, onStageImage
         {!message.isStreaming && extractedHtml && (
              <button
                 onClick={() => setShowArtifact(true)}
-                className="mt-3 flex items-center gap-2 px-4 py-2 text-sm font-bold text-[#0D0D0D] bg-gradient-to-r from-[#00c6ff] to-[#00eaff] rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(0,198,255,0.4)] group animate-fade-in-up"
+                className="mt-3 flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-[#0D0D0D] bg-gradient-to-r from-[#00c6ff] to-[#00eaff] rounded-lg hover:brightness-110 transition-all shadow-[0_0_15px_rgba(0,198,255,0.4)] group animate-fade-in-up"
              >
-                <CodeIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                <CodeIcon className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
                 <span>⚡ Run Live Preview</span>
              </button>
         )}
