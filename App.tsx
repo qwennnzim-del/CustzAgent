@@ -6,7 +6,7 @@ import ChatView from './components/ChatView';
 import ChatInput from './components/ChatInput';
 import LiveVoiceView from './components/LiveVoiceView';
 import Sidebar from './components/Sidebar';
-import NeuralBackground from './components/NeuralBackground'; // Import NeuralBackground
+import NeuralBackground from './components/NeuralBackground';
 import { Message, AspectRatio, ModelType, ChatSession, VoiceName, AgentPersona } from './types';
 
 // Fix for "Cannot find name 'process'" error during build
@@ -763,6 +763,7 @@ const App: React.FC = () => {
             stagedFile={stagedFile}
             clearStagedFile={handleClearStagedFile}
             model={model}
+            onModelChange={handleModelChange} // Added prop
             isSearchEnabled={isSearchEnabled}
             onToggleSearch={() => {
                 setIsSearchEnabled(!isSearchEnabled);

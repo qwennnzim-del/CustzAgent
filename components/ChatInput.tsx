@@ -1,9 +1,9 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { PlusIcon, SendIcon, VoiceIcon, CloseIcon, SparklesIcon, SpinnerIcon, FileIcon, CircleEllipsisIcon } from './Icons';
+import { PlusIcon, SendIcon, VoiceIcon, CloseIcon, SparklesIcon, SpinnerIcon, FileIcon, CircleEllipsisIcon, CpuIcon } from './Icons';
 import { ModelType, VoiceName, AgentPersona } from '../types';
 import { GoogleGenAI } from "@google/genai";
-import ControlsBottomSheet from './ControlsBottomSheet'; // Import new component
+import ControlsBottomSheet from './ControlsBottomSheet';
+import ModelBottomSheet from './ModelBottomSheet';
 
 // Fix for "Cannot find name 'process'" error during build
 declare const process: any;
@@ -16,6 +16,7 @@ interface ChatInputProps {
   stagedFile: { url: string; file: File } | null;
   clearStagedFile: () => void;
   model: ModelType;
+  onModelChange: (model: ModelType) => void; // Added Prop
   isSearchEnabled: boolean;
   onToggleSearch: () => void;
   isThinkingEnabled?: boolean;
@@ -36,6 +37,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     stagedFile,
     clearStagedFile,
     model,
+    onModelChange, // Destructure
     isSearchEnabled,
     onToggleSearch,
     isThinkingEnabled,
@@ -50,7 +52,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isEnhanced, setIsEnhanced] = useState(false);
-  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false); // New state for bottom sheet
+  const [isControlsSheetOpen, setIsControlsSheetOpen] = useState(false);
+  const [isModelSheetOpen, setIsModelSheetOpen] = useState(false); // New State
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -74,7 +77,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
       onSendMessage(inputValue);
       setInputValue('');
       setIsEnhanced(false);
-      setIsBottomSheetOpen(false); // Close bottom sheet on send
+      setIsControlsSheetOpen(false);
+      setIsModelSheetOpen(false);
     }
   };
 
@@ -122,7 +126,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
     if (file) {
       onFileChange(file);
     }
-    // Reset file input value to allow selecting the same file again
     if(fileInputRef.current) {
         fileInputRef.current.value = '';
     }
@@ -133,13 +136,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     : "Message CustzAgent...";
 
   const isFileUploadDisabled = model === 'imagen-4.0-generate-001';
-  
-  // Supported features based on model
-  const isChatModel = ['gemini-2.5-flash', 'gemini-3-pro-preview', 'gemini-flash-lite-latest', 'gemini-1.5-flash'].includes(model);
-
   const isImage = stagedFile?.file.type.startsWith('image/');
-  
-  // Logic to determine if we should show Send or Voice button
   const hasContent = inputValue.trim().length > 0 || stagedFile !== null;
 
   return (
@@ -152,12 +149,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
         
         {/* Holographic Input Preview */}
         {stagedFile && (
-            <div className="relative self-start mb-4 group select-none overflow-hidden rounded-xl border border-blue-500/30 bg-blue-900/10 backdrop-blur-md shadow-[0_0_15px_rgba(0,198,255,0.15)] transition-all hover:shadow-[0_0_25px_rgba(0,198,255,0.3)] w-full max-w-xs">
+            <div className="relative self-start mb-4 group select-none overflow-hidden rounded-xl border border-blue-500/30 bg-blue-900/10 backdrop-blur-md shadow-[0_0_15px_rgba(0,198,255,0.15)] transition-all hover:shadow-[0_0_25px_rgba(0,198,255,0.3)] w-full max-w-xs animate-fade-in-up">
                 {/* Scanline Effect */}
                 <div className="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-blue-400/10 to-transparent opacity-20 animate-[shimmer_2s_infinite]" style={{ backgroundSize: '100% 200%' }}></div>
 
                 <div className="relative z-10 flex items-center gap-4 p-3 pr-10">
-                    {/* Content Logic (Image vs File) with Pulse animation */}
                      {isImage ? (
                         <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-blue-400/30 shadow-inner">
                             <img src={stagedFile.url} alt="Holo Preview" className="h-full w-full object-cover opacity-90" />
@@ -182,13 +178,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
                     </div>
                 </div>
 
-                {/* Tech Accents (Decorations) */}
                 <div className="absolute top-0 left-0 h-2 w-2 border-l border-t border-blue-400 opacity-60"></div>
                 <div className="absolute bottom-0 right-0 h-2 w-2 border-r border-b border-blue-400 opacity-60"></div>
                 <div className="absolute top-0 right-0 h-2 w-2 border-r border-t border-blue-400 opacity-60"></div>
                 <div className="absolute bottom-0 left-0 h-2 w-2 border-l border-b border-blue-400 opacity-60"></div>
 
-                {/* Close Button */}
                 <button
                     onClick={clearStagedFile}
                     className="absolute top-1 right-1 p-1.5 text-blue-400 hover:text-white transition-colors z-20 hover:bg-blue-500/20 rounded-full"
@@ -211,21 +205,30 @@ const ChatInput: React.FC<ChatInputProps> = ({
         />
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-center gap-1">
-              {/* Ellipsis/More Controls Button */}
+              {/* Ellipsis/Controls Button */}
               <button
-                onClick={() => setIsBottomSheetOpen(true)}
-                className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-gray-700/50"
-                title="More controls (Search, CoT, Turbo)"
+                onClick={() => setIsControlsSheetOpen(true)}
+                className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-gray-700/50 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                title="More controls"
               >
                 <CircleEllipsisIcon className="w-5 h-5" />
+              </button>
+              
+              {/* Model Selector Button (NEW) */}
+              <button
+                onClick={() => setIsModelSheetOpen(true)}
+                className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-gray-700/50 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                title="Select Model"
+              >
+                <CpuIcon className="w-5 h-5" />
               </button>
 
               {/* Prompt Enhancer */}
               <button 
                 onClick={handleEnhancePrompt}
                 disabled={isEnhancing || !inputValue.trim()}
-                className={`p-2 transition-colors rounded-full hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed ${isEnhanced ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`}
-                title="Enhance Prompt with AI"
+                className={`p-2 transition-colors rounded-full hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center ${isEnhanced ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`}
+                title="Enhance Prompt"
               >
                   {isEnhancing ? (
                     <SpinnerIcon className="w-5 h-5 animate-spin text-blue-400" />
@@ -236,12 +239,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
           </div>
           
           <div className="flex items-center gap-2">
-            {/* Plus Button - Now on the RIGHT */}
+            {/* Plus Button */}
             <button 
                  onClick={handlePlusClick} 
                  disabled={isFileUploadDisabled}
-                 className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
-                 title={isFileUploadDisabled ? "File upload not available for Imagen model" : "Upload file or image"}
+                 className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   <PlusIcon className="w-5 h-5" />
             </button>
@@ -257,14 +259,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
             <button
                 onClick={hasContent ? handleSend : onVoiceClick}
                 disabled={isLoading}
-                className={`p-2.5 rounded-full transition-all duration-300 transform 
+                className={`p-2.5 rounded-full transition-all duration-300 transform min-w-[44px] min-h-[44px] flex items-center justify-center
                     ${hasContent 
                         ? 'bg-blue-600 text-white hover:bg-blue-500 hover:scale-105 shadow-lg shadow-blue-500/30' 
                         : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
                     } disabled:bg-gray-600 disabled:cursor-not-allowed disabled:shadow-none`}
-                title={hasContent ? "Send Message" : "Voice Input"}
             >
-                {/* Animation Container */}
                 <div className="relative w-5 h-5">
                      <div className={`absolute inset-0 transition-all duration-300 ${hasContent ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-50'}`}>
                          <SendIcon className="w-5 h-5" />
@@ -283,8 +283,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
       {/* Controls Bottom Sheet */}
       <ControlsBottomSheet
-        isOpen={isBottomSheetOpen}
-        onClose={() => setIsBottomSheetOpen(false)}
+        isOpen={isControlsSheetOpen}
+        onClose={() => setIsControlsSheetOpen(false)}
         isSearchEnabled={isSearchEnabled}
         onToggleSearch={onToggleSearch}
         isThinkingEnabled={isThinkingEnabled}
@@ -296,6 +296,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
         onVoiceChange={onVoiceChange}
         persona={persona}
         onPersonaChange={onPersonaChange}
+      />
+      
+      {/* Model Bottom Sheet (NEW) */}
+      <ModelBottomSheet
+        isOpen={isModelSheetOpen}
+        onClose={() => setIsModelSheetOpen(false)}
+        model={model}
+        onModelChange={onModelChange}
       />
     </div>
   );
