@@ -87,26 +87,53 @@ const ActionButton: React.FC<{ onClick: () => void; children: React.ReactNode; d
 );
 
 const ArtifactModal: React.FC<{ code: string; onClose: () => void }> = ({ code, onClose }) => {
+    const [isCopied, setIsCopied] = useState(false);
+
+    const handleCopyCode = () => {
+        navigator.clipboard.writeText(code);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+    };
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 animate-fade-in">
-             <div className="bg-[#1A1A1A] w-full h-[85vh] sm:h-[90vh] max-w-6xl rounded-xl sm:rounded-2xl border border-gray-700 shadow-2xl flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3 border-b border-gray-700 bg-[#121212]">
-                    <div className="flex items-center gap-2">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-0 sm:p-4 animate-fade-in">
+             <div className="w-full h-full sm:h-[90vh] max-w-6xl bg-[#121212] sm:rounded-xl flex flex-col overflow-hidden relative border border-gray-800 shadow-2xl">
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 py-3 bg-[#1A1A1A] border-b border-gray-800 shrink-0">
+                    <div className="flex items-center gap-3">
                         <span className="flex gap-1.5">
-                            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500/80"></span>
-                            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-500/80"></span>
-                            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500/80"></span>
+                            <span className="w-3 h-3 rounded-full bg-red-500/80"></span>
+                            <span className="w-3 h-3 rounded-full bg-yellow-500/80"></span>
+                            <span className="w-3 h-3 rounded-full bg-green-500/80"></span>
                         </span>
-                        <span className="ml-3 text-[10px] sm:text-xs font-mono text-gray-400 uppercase tracking-wider">Custz Artifact Preview</span>
+                        <span className="ml-2 text-xs font-mono text-gray-400 uppercase tracking-wider hidden sm:inline">Custz Artifact Preview</span>
                     </div>
-                    <button onClick={onClose} className="p-1 text-gray-400 hover:text-white transition-colors">
-                        <CloseIcon className="w-5 h-5" />
-                    </button>
+                    
+                    <div className="flex items-center gap-3">
+                        {/* Copy Code Button */}
+                        <button 
+                            onClick={handleCopyCode}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                                isCopied 
+                                ? 'bg-green-500/10 border-green-500/50 text-green-400' 
+                                : 'bg-gray-800 hover:bg-gray-700 border-gray-700 text-gray-300'
+                            }`}
+                        >
+                            {isCopied ? <CheckIcon className="w-4 h-4" /> : <CopyIcon className="w-4 h-4" />}
+                            <span>{isCopied ? 'Copied' : 'Copy Code'}</span>
+                        </button>
+
+                        <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors">
+                            <CloseIcon className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
-                <div className="flex-grow bg-white relative">
+                
+                {/* Iframe Content */}
+                <div className="flex-grow bg-white relative w-full h-full">
                     <iframe 
                         srcDoc={code}
-                        className="w-full h-full border-none"
+                        className="w-full h-full border-none bg-white block"
                         title="Preview"
                         sandbox="allow-scripts allow-forms allow-same-origin allow-modals"
                     />
