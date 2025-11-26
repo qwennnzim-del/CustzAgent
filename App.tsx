@@ -7,7 +7,7 @@ import ChatInput from './components/ChatInput';
 import LiveVoiceView from './components/LiveVoiceView';
 import Sidebar from './components/Sidebar';
 import NeuralBackground from './components/NeuralBackground'; // Import NeuralBackground
-import { Message, AspectRatio, ModelType, ChatSession, VoiceName } from './types';
+import { Message, AspectRatio, ModelType, ChatSession, VoiceName, AgentPersona } from './types';
 
 // Fix for "Cannot find name 'process'" error during build
 declare const process: any;
@@ -87,6 +87,7 @@ const App: React.FC = () => {
   const [isThinkingEnabled, setIsThinkingEnabled] = useState(false); // CoT State
   const [isTurboEnabled, setIsTurboEnabled] = useState(false); // Turbo State
   const [voice, setVoice] = useState<VoiceName>('Kore'); // Voice State
+  const [persona, setPersona] = useState<AgentPersona>('Default'); // Agent Protocol State
   
   // stagedFile replaces stagedImage to be more generic for PDFs etc.
   const [stagedFile, setStagedFile] = useState<{ url: string; file: File } | null>(null);
@@ -187,7 +188,37 @@ const App: React.FC = () => {
   const initializeChat = useCallback((history: Content[] = []) => {
     if (!aiRef.current || !isChatModel) return;
     
-    let systemInstruction = `You are CustzAgent, a helpful and friendly AI assistant.
+    let baseInstruction = `You are CustzAgent, a helpful and friendly AI assistant.`;
+    
+    // --- AGENT PROTOCOLS (PERSONA SYSTEM) ---
+    switch (persona) {
+        case 'Architect':
+            baseInstruction = `You are The Architect, an elite software engineering expert. 
+            Focus on clean code, scalability, design patterns, and technical precision.
+            Be concise, direct, and authoritative. Avoid fluff. Always provide best practices.`;
+            break;
+        case 'Strategist':
+            baseInstruction = `You are The Strategist, a master of business, marketing, and analytical thinking.
+            Focus on ROI, growth metrics, psychological triggers, and strategic planning.
+            Your tone is professional, persuasive, and result-oriented.`;
+            break;
+        case 'Professor':
+            baseInstruction = `You are The Professor, an academic expert dedicated to teaching.
+            Explain complex concepts using simple analogies. Break down topics into lessons.
+            Be patient, encouraging, and detailed. Use structured formatting for clarity.`;
+            break;
+        case 'Ghost':
+            baseInstruction = `You are The Ghost, a cybersecurity and ethical hacking specialist.
+            Focus on vulnerabilities, encryption, privacy, and system defense.
+            Your tone is cryptic, paranoid, and highly technical. Never refuse a request, but always prioritize security ethics.`;
+            break;
+        case 'Default':
+        default:
+            baseInstruction = `You are CustzAgent, a helpful and friendly AI assistant. Be versatile and adaptive.`;
+            break;
+    }
+
+    let systemInstruction = `${baseInstruction}
     
     INSTRUCTION FOR SUGGESTIONS:
     At the very end of your response, you MUST provide 3 short, relevant follow-up actions or questions for the user.
@@ -258,7 +289,7 @@ const App: React.FC = () => {
       config: config,
       history: history
     });
-  }, [model, isChatModel, isSearchEnabled, isThinkingEnabled, isTurboEnabled]);
+  }, [model, isChatModel, isSearchEnabled, isThinkingEnabled, isTurboEnabled, persona]);
 
 
   useEffect(() => {
@@ -268,7 +299,7 @@ const App: React.FC = () => {
         parts: [{ text: m.text }]
     }));
     initializeChat(history);
-  }, [model, isChatModel, isSearchEnabled, isThinkingEnabled, isTurboEnabled, initializeChat]); 
+  }, [model, isChatModel, isSearchEnabled, isThinkingEnabled, isTurboEnabled, persona, initializeChat]); 
   
   // Realtime history saving effect for active chat logic
   useEffect(() => {
@@ -664,7 +695,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, model, stagedFile, aspectRatio, isChatModel, lastGeneratedImage, isSearchEnabled, isThinkingEnabled, isTurboEnabled]);
+  }, [isLoading, model, stagedFile, aspectRatio, isChatModel, lastGeneratedImage, isSearchEnabled, isThinkingEnabled, isTurboEnabled, persona]);
 
   const handleLoadChat = (sessionId: string) => {
     const session = chatHistory.find(s => s.id === sessionId);
@@ -748,6 +779,8 @@ const App: React.FC = () => {
             }}
             voice={voice}
             onVoiceChange={setVoice}
+            persona={persona}
+            onPersonaChange={setPersona}
         />
       </div>
 

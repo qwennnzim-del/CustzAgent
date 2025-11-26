@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { PlusIcon, SendIcon, VoiceIcon, CloseIcon, SparklesIcon, SpinnerIcon, FileIcon, CircleEllipsisIcon } from './Icons';
-import { ModelType, VoiceName } from '../types';
+import { ModelType, VoiceName, AgentPersona } from '../types';
 import { GoogleGenAI } from "@google/genai";
 import ControlsBottomSheet from './ControlsBottomSheet'; // Import new component
 
@@ -24,6 +24,8 @@ interface ChatInputProps {
   onToggleTurbo?: () => void;
   voice: VoiceName;
   onVoiceChange: (voice: VoiceName) => void;
+  persona: AgentPersona;
+  onPersonaChange: (persona: AgentPersona) => void;
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({ 
@@ -41,7 +43,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
     isTurboEnabled,
     onToggleTurbo,
     voice,
-    onVoiceChange
+    onVoiceChange,
+    persona,
+    onPersonaChange
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isEnhancing, setIsEnhancing] = useState(false);
@@ -290,6 +294,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
         model={model}
         voice={voice}
         onVoiceChange={onVoiceChange}
+        persona={persona}
+        onPersonaChange={onPersonaChange}
       />
     </div>
   );

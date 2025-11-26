@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { GlobeIcon, BrainIcon, LightningIcon } from './Icons';
-import { ModelType, VoiceName } from '../types';
+import { ModelType, VoiceName, AgentPersona } from '../types';
 
 interface ControlsBottomSheetProps {
   isOpen: boolean;
@@ -15,6 +15,8 @@ interface ControlsBottomSheetProps {
   model: ModelType;
   voice: VoiceName;
   onVoiceChange: (voice: VoiceName) => void;
+  persona: AgentPersona;
+  onPersonaChange: (persona: AgentPersona) => void;
 }
 
 const ControlsBottomSheet: React.FC<ControlsBottomSheetProps> = ({
@@ -28,7 +30,9 @@ const ControlsBottomSheet: React.FC<ControlsBottomSheetProps> = ({
   onToggleTurbo,
   model,
   voice,
-  onVoiceChange
+  onVoiceChange,
+  persona,
+  onPersonaChange
 }) => {
   const isChatModel = ['gemini-2.5-flash', 'gemini-3-pro-preview', 'gemini-flash-lite-latest', 'gemini-1.5-flash'].includes(model);
   const isThinkingSupported = ['gemini-2.5-flash', 'gemini-3-pro-preview', 'gemini-flash-lite-latest'].includes(model);
@@ -39,6 +43,14 @@ const ControlsBottomSheet: React.FC<ControlsBottomSheetProps> = ({
       { id: 'Puck', label: 'Puck', desc: 'Soft & Friendly' },
       { id: 'Charon', label: 'Charon', desc: 'Deep & Authoritative' },
       { id: 'Aoede', label: 'Aoede', desc: 'High & Expressive' },
+  ];
+
+  const personas: { id: AgentPersona; label: string; desc: string; color: string }[] = [
+      { id: 'Default', label: 'Default Protocol', desc: 'Standard Assistant', color: 'bg-gray-500' },
+      { id: 'Architect', label: 'The Architect', desc: 'Coding & System Design Expert', color: 'bg-blue-500' },
+      { id: 'Strategist', label: 'The Strategist', desc: 'Business & Marketing Guru', color: 'bg-green-500' },
+      { id: 'Professor', label: 'The Professor', desc: 'Academic Teacher', color: 'bg-yellow-500' },
+      { id: 'Ghost', label: 'The Ghost', desc: 'Cybersecurity Specialist', color: 'bg-red-500' },
   ];
 
   return (
@@ -55,7 +67,7 @@ const ControlsBottomSheet: React.FC<ControlsBottomSheetProps> = ({
       {/* Bottom Sheet */}
       <div
         className={`fixed bottom-0 left-0 right-0 z-50 bg-[#1A1A1A] rounded-t-3xl shadow-xl transform transition-transform duration-300 ease-out 
-          ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
+          ${isOpen ? 'translate-y-0' : 'translate-y-full'} max-h-[85vh] overflow-y-auto`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="controls-sheet-title"
@@ -123,6 +135,38 @@ const ControlsBottomSheet: React.FC<ControlsBottomSheetProps> = ({
               </div>
           </div>
           
+          {/* Agent Protocol Section (NEW) */}
+          <div className="mb-6">
+               <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-3 px-2">Active Protocol (Persona)</p>
+               <div className="grid grid-cols-1 gap-2">
+                   {personas.map((p) => (
+                       <button
+                           key={p.id}
+                           onClick={() => onPersonaChange(p.id)}
+                           className={`relative flex items-center justify-between px-4 py-3 rounded-xl transition-all overflow-hidden ${
+                               persona === p.id 
+                               ? 'bg-gray-800 border border-white/20 shadow-lg' 
+                               : 'bg-gray-900/50 border border-transparent hover:bg-gray-800'
+                           }`}
+                       >
+                           {/* Glow effect for active card */}
+                           {persona === p.id && (
+                               <div className={`absolute left-0 top-0 bottom-0 w-1 ${p.color} shadow-[0_0_10px_currentColor]`}></div>
+                           )}
+                           
+                           <div className="flex flex-col items-start ml-2">
+                               <span className={`text-sm font-bold ${persona === p.id ? 'text-white' : 'text-gray-300'}`}>{p.label}</span>
+                               <span className="text-[10px] text-gray-500">{p.desc}</span>
+                           </div>
+                           
+                           {persona === p.id && (
+                               <div className={`w-2 h-2 rounded-full ${p.color} shadow-[0_0_8px_currentColor]`}></div>
+                           )}
+                       </button>
+                   ))}
+               </div>
+          </div>
+
           {/* Voice Matrix Section */}
           <div>
                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-3 px-2">Voice Identity Matrix</p>
