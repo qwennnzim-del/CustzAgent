@@ -510,7 +510,6 @@ const App: React.FC = () => {
 
         } 
         else if (model === 'imagen-4.0-generate-001') {
-             // ... (Imagen logic - unchanged)
              setMessages(prev => prev.map(msg => 
                 msg.id === botMessageId ? { ...msg, statusText: 'Optimizing prompt for Ultra Quality (8k)...' } : msg
              ));
@@ -538,17 +537,42 @@ const App: React.FC = () => {
                 msg.id === botMessageId ? { ...msg, statusText: 'Rendering high-fidelity image...' } : msg
              ));
 
-             const response = await aiClient.models.generateImages({
-                model: 'imagen-4.0-generate-001',
-                prompt: enhancedPrompt,
-                config: {
-                    numberOfImages: 1,
-                    aspectRatio: aspectRatio
-                }
-             });
+             let response;
+             let finalImageUrl: string | undefined = undefined;
+
+             try {
+                 // Try Imagen 4.0 First
+                 response = await aiClient.models.generateImages({
+                    model: 'imagen-4.0-generate-001',
+                    prompt: enhancedPrompt,
+                    config: {
+                        numberOfImages: 1,
+                        aspectRatio: aspectRatio
+                    }
+                 });
+             } catch (imagenError) {
+                 console.warn("Imagen 4.0 generation failed, attempting fallback to Imagen 3.0...", imagenError);
+                 setMessages(prev => prev.map(msg => 
+                    msg.id === botMessageId ? { ...msg, statusText: 'Agent Imagen 4.0 unavailable. Falling back to Standard Engine...' } : msg
+                 ));
+                 
+                 // Fallback to Imagen 3.0
+                 try {
+                     response = await aiClient.models.generateImages({
+                        model: 'imagen-3.0-generate-001',
+                        prompt: enhancedPrompt,
+                        config: {
+                            numberOfImages: 1,
+                            aspectRatio: aspectRatio
+                        }
+                     });
+                 } catch (fallbackError: any) {
+                     throw fallbackError; // Re-throw to main catch handler
+                 }
+             }
 
              const base64 = response.generatedImages?.[0]?.image?.imageBytes;
-             const imageUrl = base64 ? `data:image/png;base64,${base64}` : undefined;
+             finalImageUrl = base64 ? `data:image/png;base64,${base64}` : undefined;
              
              const suggestions = await generatePostTaskSuggestions(text, 'IMAGE_GEN');
 
@@ -557,14 +581,14 @@ const App: React.FC = () => {
                     return {
                         ...msg,
                         isStreaming: false,
-                        text: imageUrl ? `Generated image for: "${text}"` : "Failed to generate image.",
-                        imageUrl: imageUrl,
+                        text: finalImageUrl ? `Generated image for: "${text}"` : "Failed to generate image.",
+                        imageUrl: finalImageUrl,
                         suggestions: suggestions
                     };
                 }
                 return msg;
             }));
-             if (imageUrl) setLastGeneratedImage(imageUrl);
+             if (finalImageUrl) setLastGeneratedImage(finalImageUrl);
 
         } 
         else if (isChatModel && chatRef.current) {
@@ -680,14 +704,14 @@ const App: React.FC = () => {
                 return msg;
             }));
         }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Generation error:", error);
       setMessages(prev => prev.map(msg => {
         if (msg.id === botMessageId) {
             return {
                 ...msg,
                 isStreaming: false,
-                text: "Maaf, terjadi kesalahan saat memproses permintaan Anda. Silakan coba lagi."
+                text: `⚠️ **System Error:** ${error.message || "Unknown error occurred."}\n\n*Note: Image generation or advanced features may require a billed API key or are currently restricted in your region.*`
             };
         }
         return msg;
