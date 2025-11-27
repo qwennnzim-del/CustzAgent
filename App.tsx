@@ -219,6 +219,16 @@ const App: React.FC = () => {
     }
 
     let systemInstruction = `${baseInstruction}
+
+    GLOBAL FORMATTING PROTOCOL (STRICT):
+    You MUST format ALL your responses using clear, structured Markdown.
+    1. Use **Headings** (##, ###) to separate sections and topics.
+    2. Use **Bullet Points** (-) or **Numbered Lists** (1.) for steps, lists, or features.
+    3. Use **Bold** (**text**) for key terms, important numbers, or emphasis.
+    4. Use \`Code Blocks\` (\`\`\`) for any code, terminal commands, or structured data.
+    5. Use \`Inline Code\` (\`text\`) for variables, filenames, or technical terms.
+    6. Keep paragraphs concise. Avoid walls of plain text.
+    7. Use Tables where appropriate to compare data.
     
     INSTRUCTION FOR SUGGESTIONS:
     At the very end of your response, you MUST provide 3 short, relevant follow-up actions or questions for the user.
