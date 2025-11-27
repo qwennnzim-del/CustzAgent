@@ -550,29 +550,38 @@ const App: React.FC = () => {
                         aspectRatio: aspectRatio
                     }
                  });
+                 const base64 = response.generatedImages?.[0]?.image?.imageBytes;
+                 finalImageUrl = base64 ? `data:image/png;base64,${base64}` : undefined;
+
              } catch (imagenError) {
-                 console.warn("Imagen 4.0 generation failed, attempting fallback to Imagen 3.0...", imagenError);
+                 console.warn("Imagen 4.0 generation failed, attempting fallback...", imagenError);
                  setMessages(prev => prev.map(msg => 
-                    msg.id === botMessageId ? { ...msg, statusText: 'Agent Imagen 4.0 unavailable. Falling back to Standard Engine...' } : msg
+                    msg.id === botMessageId ? { ...msg, statusText: 'Agent Imagen 4.0 unavailable. Falling back to Flash Image Engine...' } : msg
                  ));
                  
-                 // Fallback to Imagen 3.0
+                 // Fallback to Gemini 2.5 Flash Image via generateContent (Native Generation)
                  try {
-                     response = await aiClient.models.generateImages({
-                        model: 'imagen-3.0-generate-001',
-                        prompt: enhancedPrompt,
-                        config: {
-                            numberOfImages: 1,
-                            aspectRatio: aspectRatio
-                        }
+                     const fallbackResponse = await aiClient.models.generateContent({
+                        model: 'gemini-2.5-flash-image',
+                        contents: { parts: [{ text: enhancedPrompt }] }
                      });
+                     
+                     if (fallbackResponse.candidates?.[0]?.content?.parts) {
+                        for (const part of fallbackResponse.candidates[0].content.parts) {
+                            if (part.inlineData) {
+                                const base64 = part.inlineData.data;
+                                finalImageUrl = `data:${part.inlineData.mimeType};base64,${base64}`;
+                                break;
+                            }
+                        }
+                     }
+                     if (!finalImageUrl) throw new Error("Fallback engine returned no image.");
+
                  } catch (fallbackError: any) {
-                     throw fallbackError; // Re-throw to main catch handler
+                     // If both fail, throw specific error
+                      throw new Error(`Image Generation Failed. \n\nImagen 4.0 requires a paid/allowlisted API key. \nFallback Flash Engine error: ${fallbackError.message}`);
                  }
              }
-
-             const base64 = response.generatedImages?.[0]?.image?.imageBytes;
-             finalImageUrl = base64 ? `data:image/png;base64,${base64}` : undefined;
              
              const suggestions = await generatePostTaskSuggestions(text, 'IMAGE_GEN');
 
