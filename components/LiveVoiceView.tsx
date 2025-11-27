@@ -56,10 +56,11 @@ const LiveVoiceView: React.FC<LiveVoiceViewProps> = ({ onClose, onSend, voice })
     
     const startListening = async () => {
       try {
-        if (!process.env.API_KEY) {
+        // Updated to GEMINI_API_KEY
+        if (!process.env.GEMINI_API_KEY) {
             throw new Error("API Key is not configured.");
         }
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
         mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 

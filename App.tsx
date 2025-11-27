@@ -105,7 +105,8 @@ const App: React.FC = () => {
 
   const chatModels = ['gemini-2.5-flash', 'gemini-3-pro-preview', 'gemini-flash-lite-latest', 'gemini-1.5-flash'];
   const isChatModel = chatModels.includes(model);
-  const isImageGenModel = model === 'imagen-4.0-generate-001' || model === 'imagen-4.0-fast-generate-001';
+  // Unified model logic for images (Generation & Editing)
+  const isImageModel = model === 'gemini-2.5-flash-image' || model === 'imagen-4.0-generate-001'; 
 
   // Geolocation setup
   useEffect(() => {
@@ -135,11 +136,11 @@ const App: React.FC = () => {
     }
     
     try {
-      if (!process.env.API_KEY) {
-        console.warn("API_KEY environment variable not set.");
+      if (!process.env.GEMINI_API_KEY) {
+        console.warn("GEMINI_API_KEY environment variable not set.");
         return;
       }
-      aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+      aiRef.current = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
     } catch (error) {
        console.error("Failed to initialize GoogleGenAI:", error);
     }
@@ -449,7 +450,7 @@ const App: React.FC = () => {
         statusText: 'Initializing...',
         thinkingText: '',
         isThinkingMode: shouldUseThinkingMode, // Trigger the box immediately
-        ...(isImageGenModel && { aspectRatio: aspectRatio })
+        ...(isImageModel && { aspectRatio: aspectRatio })
     };
 
     setMessages(prev => [...prev, userMessage, initialBotMessage]);
@@ -464,206 +465,126 @@ const App: React.FC = () => {
         if (!aiRef.current) throw new Error("AI Client not initialized.");
         const aiClient = aiRef.current;
         
-        if (model === 'gemini-2.5-flash-image' && (fileToSend || continuousEditImage)) {
-            // ... (Edit logic - unchanged)
-            setMessages(prev => prev.map(msg => 
-                msg.id === botMessageId ? { ...msg, statusText: 'Locking identity features & analyzing structure...' } : msg
-            ));
-
-            const imagePart = fileToSend 
-              ? await fileToGenerativePart(fileToSend) 
-              : await dataUrlToGenerativePart(continuousEditImage!);
-
-            const preservationPrompt = `
-            STRICT INSTRUCTION FOR IMAGE EDITING:
-            1. Task: ${text}
-            2. CONSTRAINT: You MUST PRESERVE the identity, facial features, skin tone, and structure of the main subject EXACTLY. 
-            3. CONSTRAINT: Do NOT regenerate the face. Keep the face looking exactly like the original image.
-            4. CONSTRAINT: Keep the background, lighting, and style identical unless the task specifically asks to change them.
-            5. Make the edit blend naturally. Return a photorealistic image.
-            `;
-
-            const textPart = { text: preservationPrompt };
-            const response = await aiClient.models.generateContent({
-                model: 'gemini-2.5-flash-image',
-                contents: { parts: [imagePart, textPart] }
-            });
+        // --- UNIFIED IMAGE MODEL LOGIC ---
+        if (isImageModel) {
             
-            let imageUrl = '';
-            let description = '';
+            // CASE 1: IMAGE EDITING (File attached or continuous edit)
+            // Note: Imagen 4.0 typically doesn't handle editing via same endpoint, so we default to Flash Image for edits.
+            if (fileToSend || continuousEditImage) {
+                setMessages(prev => prev.map(msg => 
+                    msg.id === botMessageId ? { ...msg, statusText: 'Analyzing image structure...' } : msg
+                ));
 
-            if (response.candidates && response.candidates[0].content.parts) {
-                for (const part of response.candidates[0].content.parts) {
-                    if (part.inlineData) {
-                         const base64 = part.inlineData.data;
-                         imageUrl = `data:${part.inlineData.mimeType};base64,${base64}`;
-                    } else if (part.text) {
-                        description += part.text;
-                    }
-                }
-            }
+                const imagePart = fileToSend 
+                  ? await fileToGenerativePart(fileToSend) 
+                  : await dataUrlToGenerativePart(continuousEditImage!);
 
-            const suggestions = await generatePostTaskSuggestions(text, 'IMAGE_EDIT');
+                const preservationPrompt = `
+                STRICT INSTRUCTION FOR IMAGE EDITING:
+                1. Task: ${text}
+                2. CONSTRAINT: You MUST PRESERVE the identity, facial features, skin tone, and structure of the main subject EXACTLY. 
+                3. CONSTRAINT: Do NOT regenerate the face. Keep the face looking exactly like the original image.
+                4. CONSTRAINT: Keep the background, lighting, and style identical unless the task specifically asks to change them.
+                5. Make the edit blend naturally. Return a photorealistic image.
+                `;
 
-            setMessages(prev => prev.map(msg => {
-                if (msg.id === botMessageId) {
-                    return {
-                        ...msg,
-                        isStreaming: false,
-                        text: description || "Image edit complete.",
-                        imageUrl: imageUrl || undefined,
-                        suggestions: suggestions
-                    };
-                }
-                return msg;
-            }));
-            if (imageUrl) setLastGeneratedImage(imageUrl);
-
-        } 
-        else if (isImageGenModel) {
-             setMessages(prev => prev.map(msg => 
-                msg.id === botMessageId ? { ...msg, statusText: 'Optimizing prompt for Agent Quality...' } : msg
-             ));
-
-             let enhancedPrompt = text;
-             try {
-                const optimizerResponse = await aiClient.models.generateContent({
-                    model: 'gemini-2.5-flash',
-                    contents: `You are an expert prompt engineer for AI image generation. 
-                    Rewrite the following user prompt to generate a high-fidelity, 8k resolution, photorealistic, and cinematically lit image.
-                    Add details about texture, lighting, and composition to make it look professional (like the 'Pro' model).
-                    Keep the original subject and intent.
-                    Return ONLY the enhanced prompt text, no explanations.
-                    
-                    Original Prompt: "${text}"`
+                const textPart = { text: preservationPrompt };
+                // Always use gemini-2.5-flash-image for editing
+                const response = await aiClient.models.generateContent({
+                    model: 'gemini-2.5-flash-image',
+                    contents: { parts: [imagePart, textPart] }
                 });
-                if (optimizerResponse.text) {
-                    enhancedPrompt = optimizerResponse.text.trim();
+                
+                let imageUrl = '';
+                let description = '';
+
+                if (response.candidates && response.candidates[0].content.parts) {
+                    for (const part of response.candidates[0].content.parts) {
+                        if (part.inlineData) {
+                             const base64 = part.inlineData.data;
+                             imageUrl = `data:${part.inlineData.mimeType};base64,${base64}`;
+                        } else if (part.text) {
+                            description += part.text;
+                        }
+                    }
                 }
-             } catch (optError) {
-                 console.warn("Silent optimization failed", optError);
-             }
 
-             setMessages(prev => prev.map(msg => 
-                msg.id === botMessageId ? { ...msg, statusText: 'Rendering high-fidelity image...' } : msg
-             ));
+                const suggestions = await generatePostTaskSuggestions(text, 'IMAGE_EDIT');
 
-             let finalImageUrl: string | undefined = undefined;
-
-             // CASCADING FALLBACK STRATEGY
-             // 1. Try Selected Model (Imagen 4.0 Ultra or Fast)
-             // 2. Try Imagen 4.0 Fast (if Ultra failed)
-             // 3. Try Gemini 2.0 Flash Exp (Free fallback)
-             // 4. Try Gemini 2.5 Flash Image (User requested fallback)
-             
-             try {
-                 // ATTEMPT 1: Selected Model
-                 const response = await aiClient.models.generateImages({
-                    model: model, // Use the actual selected model (4.0-generate or 4.0-fast-generate)
-                    prompt: enhancedPrompt,
-                    config: {
-                        numberOfImages: 1,
-                        aspectRatio: aspectRatio
+                setMessages(prev => prev.map(msg => {
+                    if (msg.id === botMessageId) {
+                        return {
+                            ...msg,
+                            isStreaming: false,
+                            text: description || "Image edit complete.",
+                            imageUrl: imageUrl || undefined,
+                            suggestions: suggestions
+                        };
                     }
-                 });
-                 const base64 = response.generatedImages?.[0]?.image?.imageBytes;
-                 finalImageUrl = base64 ? `data:image/png;base64,${base64}` : undefined;
+                    return msg;
+                }));
+                if (imageUrl) setLastGeneratedImage(imageUrl);
+            } 
+            // CASE 2: IMAGE GENERATION (No file, text to image)
+            else {
+                 const isImagen = model === 'imagen-4.0-generate-001';
+                 setMessages(prev => prev.map(msg => 
+                    msg.id === botMessageId ? { ...msg, statusText: isImagen ? 'Rendering via Imagen 4.0...' : 'Rendering image via Flash Engine...' } : msg
+                 ));
 
-             } catch (attempt1Error) {
-                 console.warn(`Attempt 1 (${model}) failed:`, attempt1Error);
-                 
-                 // ATTEMPT 2: Try Imagen 4.0 Fast (If not already tried)
-                 if (model === 'imagen-4.0-generate-001') {
-                    try {
-                        setMessages(prev => prev.map(msg => 
-                           msg.id === botMessageId ? { ...msg, statusText: 'Ultra unavailable. Switching to Agent Fast Engine...' } : msg
-                        ));
-                        
-                        const response = await aiClient.models.generateImages({
-                            model: 'imagen-4.0-fast-generate-001',
-                            prompt: enhancedPrompt,
-                            config: {
-                                numberOfImages: 1,
-                                aspectRatio: aspectRatio
-                            }
-                        });
-                        const base64 = response.generatedImages?.[0]?.image?.imageBytes;
-                        finalImageUrl = base64 ? `data:image/png;base64,${base64}` : undefined;
-                        
-                    } catch (e) {
-                         console.warn("Attempt 2 (Fast) failed", e);
+                 let finalImageUrl = '';
+
+                 if (isImagen) {
+                    const response = await aiClient.models.generateImages({
+                        model: 'imagen-4.0-generate-001',
+                        prompt: text,
+                        config: {
+                          numberOfImages: 1,
+                          outputMimeType: 'image/jpeg',
+                          aspectRatio: aspectRatio,
+                        },
+                    });
+                    if (response.generatedImages?.[0]?.image?.imageBytes) {
+                        finalImageUrl = `data:image/jpeg;base64,${response.generatedImages[0].image.imageBytes}`;
                     }
-                 }
-
-                 // ATTEMPT 3: Gemini 2.0 Flash Exp (Reliable Free Fallback)
-                 if (!finalImageUrl) {
-                    try {
-                        setMessages(prev => prev.map(msg => 
-                            msg.id === botMessageId ? { ...msg, statusText: 'Imagen unavailable. Switching to Agent Flash 2.0 (Exp)...' } : msg
-                        ));
-                        const fallbackResponse = await aiClient.models.generateContent({
-                            model: 'gemini-2.0-flash-exp', 
-                            contents: { parts: [{ text: enhancedPrompt }] }
-                        });
-                        if (fallbackResponse.candidates?.[0]?.content?.parts) {
-                            for (const part of fallbackResponse.candidates[0].content.parts) {
-                                if (part.inlineData) {
-                                    const base64 = part.inlineData.data;
-                                    finalImageUrl = `data:${part.inlineData.mimeType};base64,${base64}`;
-                                    break;
-                                }
+                 } else {
+                     // Use gemini-2.5-flash-image for generation request
+                     const response = await aiClient.models.generateContent({
+                        model: 'gemini-2.5-flash-image',
+                        contents: { parts: [{ text: `Generate a photorealistic, high-quality image based on this description: ${text}` }] }
+                     });
+                     
+                     if (response.candidates?.[0]?.content?.parts) {
+                        for (const part of response.candidates[0].content.parts) {
+                            if (part.inlineData) {
+                                const base64 = part.inlineData.data;
+                                finalImageUrl = `data:${part.inlineData.mimeType};base64,${base64}`;
+                                break;
                             }
                         }
-                    } catch (e) {
-                         console.warn("Attempt 3 (Flash 2.0 Exp) failed", e);
-                    }
+                     }
+                 }
+
+                 if (!finalImageUrl) {
+                      throw new Error("The model did not return an image. It might be restricted to text output or input-only.");
                  }
                  
-                 // ATTEMPT 4: Gemini 2.5 Flash Image (User Request)
-                 if (!finalImageUrl) {
-                    try {
-                        setMessages(prev => prev.map(msg => 
-                            msg.id === botMessageId ? { ...msg, statusText: 'Switching to Agent Flash 2.5 Image...' } : msg
-                        ));
-                        const fallbackResponse = await aiClient.models.generateContent({
-                            model: 'gemini-2.5-flash-image', 
-                            contents: { parts: [{ text: enhancedPrompt }] }
-                        });
-                        if (fallbackResponse.candidates?.[0]?.content?.parts) {
-                            for (const part of fallbackResponse.candidates[0].content.parts) {
-                                if (part.inlineData) {
-                                    const base64 = part.inlineData.data;
-                                    finalImageUrl = `data:${part.inlineData.mimeType};base64,${base64}`;
-                                    break;
-                                }
-                            }
-                        }
-                    } catch (e) {
-                         console.warn("Attempt 4 (Flash 2.5 Image) failed", e);
+                 const suggestions = await generatePostTaskSuggestions(text, 'IMAGE_GEN');
+
+                 setMessages(prev => prev.map(msg => {
+                    if (msg.id === botMessageId) {
+                        return {
+                            ...msg,
+                            isStreaming: false,
+                            text: `Generated image for: "${text}"`,
+                            imageUrl: finalImageUrl,
+                            suggestions: suggestions
+                        };
                     }
-                 }
-
-                 if (!finalImageUrl) {
-                      // FINAL ERROR if all attempts fail
-                      throw new Error("All image generation protocols failed. Please check Quota or Billing.");
-                 }
-             }
-             
-             const suggestions = await generatePostTaskSuggestions(text, 'IMAGE_GEN');
-
-             setMessages(prev => prev.map(msg => {
-                if (msg.id === botMessageId) {
-                    return {
-                        ...msg,
-                        isStreaming: false,
-                        text: finalImageUrl ? `Generated image for: "${text}"` : "Failed to generate image.",
-                        imageUrl: finalImageUrl,
-                        suggestions: suggestions
-                    };
-                }
-                return msg;
-            }));
-             if (finalImageUrl) setLastGeneratedImage(finalImageUrl);
+                    return msg;
+                }));
+                 setLastGeneratedImage(finalImageUrl);
+            }
 
         } 
         else if (isChatModel && chatRef.current) {
@@ -690,30 +611,22 @@ const App: React.FC = () => {
             let fullResponseText = '';
             let fullThinkingText = '';
             let groundingMetadata: any = null;
-            let thoughtBuffer = ''; // Buffer to accumulate thought text
             let isInsideThinkingBlock = false;
 
             for await (const chunk of result) {
-                // Extract Thought chunks if available via tool use/thinking feature
                 const parts = chunk.candidates?.[0]?.content?.parts || [];
                 for (const part of parts) {
-                    // Check for native thought property
                     if ('thought' in part && (part as any).thought) {
                          fullThinkingText += (part as any).thought;
                     } 
                     else if (part.text) {
                         const content = part.text;
-                        
-                        // Parse Manual XML tags if present
                         if (isThinkingEnabled) {
-                             // Simple stream parsing for XML tags
                              let processedContent = content;
-                             
                              if (content.includes('<THOUGHT_PROCESS>')) {
                                  isInsideThinkingBlock = true;
                                  processedContent = processedContent.replace('<THOUGHT_PROCESS>', '');
                              }
-                             
                              if (content.includes('</THOUGHT_PROCESS>')) {
                                  isInsideThinkingBlock = false;
                                  const [thought, rest] = processedContent.split('</THOUGHT_PROCESS>');
@@ -740,7 +653,7 @@ const App: React.FC = () => {
                 
                 let currentStatus = 'Typing...';
                 if (isThinkingEnabled && !fullResponseText && fullThinkingText) currentStatus = 'Reasoning...';
-                else if (isThinkingEnabled && !fullThinkingText) currentStatus = 'Allocating logic tokens...'; // Simulating brain boot
+                else if (isThinkingEnabled && !fullThinkingText) currentStatus = 'Allocating logic tokens...';
                 if (isSearchEnabled) currentStatus = 'Analyzing sources...';
                 if (fullResponseText.length > 50) currentStatus = ''; 
 
@@ -840,7 +753,6 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-[#0D0D0D] text-white relative overflow-hidden font-sans">
-      {/* Live Neural Background - Added here */}
       <NeuralBackground isThinking={isThinkingEnabled} isTurbo={isTurboEnabled} />
 
       <Sidebar 
@@ -871,7 +783,7 @@ const App: React.FC = () => {
       </main>
 
       <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#0D0D0D] via-[#0D0D0D] to-transparent pt-10 pb-2 px-4 z-20">
-        {(isImageGenModel) && (
+        {(isImageModel) && (
             <AspectRatioControls selected={aspectRatio} onChange={setAspectRatio} />
         )}
         <ChatInput 

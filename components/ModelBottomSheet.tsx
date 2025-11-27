@@ -15,9 +15,7 @@ const ModelBottomSheet: React.FC<ModelBottomSheetProps> = ({ isOpen, onClose, mo
     { id: 'gemini-2.5-flash', name: 'Agent Flash 2.5', description: 'Standard Speed & Efficiency. Best for daily tasks.', tag: 'BALANCED' },
     { id: 'gemini-flash-lite-latest', name: 'Agent Lite 2.5', description: 'Ultra-fast & Lightweight. Instant responses.', tag: 'FASTEST' },
     { id: 'gemini-3-pro-preview', name: 'Agent Pro 3.0', description: 'High-Reasoning & Logic. Best for Math/Code.', tag: 'SMARTEST' },
-    { id: 'imagen-4.0-generate-001', name: 'Agent Imagen (Ultra)', description: '8K Photorealistic Image Generation.', tag: 'VISUAL' },
-    { id: 'imagen-4.0-fast-generate-001', name: 'Agent Imagen (Fast)', description: 'High-speed generation. Optimized for free tier.', tag: 'VISUAL' },
-    { id: 'gemini-2.5-flash-image', name: 'Agent Edit (Precision)', description: 'Identity-locked Image Editing.', tag: 'TOOL' },
+    { id: 'gemini-2.5-flash-image', name: 'Agent Image', description: 'Generation & Editing. Single unified visual engine.', tag: 'VISUAL' },
     { id: 'gemini-1.5-flash', name: 'Agent Flash 1.5', description: 'Legacy stable model.', tag: 'LEGACY' },
   ];
 

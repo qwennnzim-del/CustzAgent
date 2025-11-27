@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { PlusIcon, SendIcon, VoiceIcon, CloseIcon, SparklesIcon, SpinnerIcon, FileIcon, CircleEllipsisIcon, CpuIcon } from './Icons';
 import { ModelType, VoiceName, AgentPersona } from '../types';
@@ -87,9 +88,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
     setIsEnhancing(true);
     try {
-        if (!process.env.API_KEY) throw new Error("API Key not found");
+        // Updated to GEMINI_API_KEY
+        if (!process.env.GEMINI_API_KEY) throw new Error("API Key not found");
         
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
         // Use Flash Lite with Zero Thinking Budget for instant enhancement
         const response = await ai.models.generateContent({
             model: 'gemini-flash-lite-latest',
@@ -135,7 +137,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
     ? "Describe the projection or ask a question..." 
     : "Message CustzAgent...";
 
-  const isFileUploadDisabled = model === 'imagen-4.0-generate-001';
   const isImage = stagedFile?.file.type.startsWith('image/');
   const hasContent = inputValue.trim().length > 0 || stagedFile !== null;
 
@@ -242,7 +243,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
             {/* Plus Button */}
             <button 
                  onClick={handlePlusClick} 
-                 disabled={isFileUploadDisabled}
                  className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   <PlusIcon className="w-5 h-5" />

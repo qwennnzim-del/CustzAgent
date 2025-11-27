@@ -17,11 +17,9 @@ const Header: React.FC<HeaderProps> = ({ model, onModelChange, onToggleSidebar, 
   const getModelDisplayName = (m: ModelType) => {
     switch(m) {
         case 'gemini-3-pro-preview': return 'Pro 3.0';
-        case 'imagen-4.0-generate-001': return 'Imagen (Ultra)';
-        case 'imagen-4.0-fast-generate-001': return 'Imagen (Fast)';
-        case 'gemini-2.5-flash-image': return 'Edit (Precision)';
+        case 'gemini-2.5-flash-image': return 'Image / Edit';
         case 'gemini-flash-lite-latest': return 'Lite 2.5';
-        case 'gemini-1.5-flash': return 'Flash 1.5 (Legacy)';
+        case 'gemini-1.5-flash': return 'Flash 1.5';
         default: return 'Flash 2.5';
     }
   };
@@ -45,6 +43,14 @@ const Header: React.FC<HeaderProps> = ({ model, onModelChange, onToggleSidebar, 
     setIsDropdownOpen(false);
   }
 
+  // NOTE: Model selection is primarily handled by the BottomSheet in ChatInput now, 
+  // but we keep this list for the legacy dropdown if needed.
+  const modelOptions: { id: ModelType; name: string; description: string }[] = [
+    { id: 'gemini-2.5-flash', name: 'Agent Flash 2.5', description: 'Model tercepat untuk tugas sehari-hari.' },
+    { id: 'gemini-3-pro-preview', name: 'Agent Pro 3.0', description: 'Reasoning canggih, Coding & Math.' },
+    { id: 'gemini-2.5-flash-image', name: 'Agent Image', description: 'Pembuatan & Pengeditan Gambar.' },
+  ];
+
   return (
     <header className="fixed top-0 left-0 right-0 bg-[#0D0D0D] bg-opacity-80 backdrop-blur-sm z-20 border-b border-gray-800/50">
       <nav className="mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between h-16">
@@ -52,7 +58,7 @@ const Header: React.FC<HeaderProps> = ({ model, onModelChange, onToggleSidebar, 
           <SidebarIcon className="w-6 h-6" />
         </button>
         
-        {/* Branding Only (No Dropdown) */}
+        {/* Branding Only */}
         <div className="flex items-center gap-2 px-4 py-2 border border-gray-800 rounded-full bg-gray-900/30">
             <CusstzzLogo className="w-5 h-5" />
             <span className="text-sm">

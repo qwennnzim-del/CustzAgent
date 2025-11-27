@@ -285,10 +285,11 @@ const FinalBotMessage: React.FC<FinalBotMessageProps> = ({ message, onStageImage
     
     setIsTtsLoading(true);
     try {
-      if (!process.env.API_KEY) {
+      // Updated to GEMINI_API_KEY
+      if (!process.env.GEMINI_API_KEY) {
         throw new Error("API Key not found.");
       }
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
         contents: [{ parts: [{ text: message.text }] }],
@@ -364,8 +365,7 @@ const FinalBotMessage: React.FC<FinalBotMessageProps> = ({ message, onStageImage
           case 'gemini-2.5-flash': return 'CustzAgent Flash 2.5';
           case 'gemini-flash-lite-latest': return 'CustzAgent Lite 2.5';
           case 'gemini-1.5-flash': return 'CustzAgent Flash 1.5';
-          case 'imagen-4.0-generate-001': return 'CustzAgent Imagen';
-          case 'gemini-2.5-flash-image': return 'CustzAgent Edit';
+          case 'gemini-2.5-flash-image': return 'CustzAgent Image';
           default: return 'CustzAgent';
       }
   };
