@@ -141,16 +141,16 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const hasContent = inputValue.trim().length > 0 || stagedFile !== null;
 
   return (
-    <div className="relative max-w-3xl mx-auto">
-      {/* Glow effect */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-[#00c6ff] via-[#8a2be2] to-[#00eaff] rounded-[22px] blur-xl opacity-60 animate-gradient transition-opacity duration-300"></div>
+    <div className="relative w-full bg-[#121212] border-t border-white/10 rounded-t-[32px] shadow-[0_-4px_30px_rgba(0,0,0,0.6)] backdrop-blur-xl pt-1">
       
-      {/* Main input container */}
-      <div className="relative flex flex-col p-3 bg-[#1A1A1A] rounded-[20px] border border-gray-700/50">
-        
+      {/* Top Border Glow Accent */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-[2px] bg-gradient-to-r from-transparent via-[#00c6ff] to-transparent opacity-80 shadow-[0_0_10px_#00c6ff]"></div>
+
+      <div className="max-w-4xl mx-auto px-4 pt-4 pb-2">
+      
         {/* Holographic Input Preview */}
         {stagedFile && (
-            <div className="relative self-start mb-4 group select-none overflow-hidden rounded-xl border border-blue-500/30 bg-blue-900/10 backdrop-blur-md shadow-[0_0_15px_rgba(0,198,255,0.15)] transition-all hover:shadow-[0_0_25px_rgba(0,198,255,0.3)] w-full max-w-xs animate-fade-in-up">
+            <div className="relative self-start mb-3 group select-none overflow-hidden rounded-xl border border-blue-500/30 bg-blue-900/10 backdrop-blur-md shadow-[0_0_15px_rgba(0,198,255,0.15)] transition-all hover:shadow-[0_0_25px_rgba(0,198,255,0.3)] w-full max-w-xs animate-fade-in-up">
                 {/* Scanline Effect */}
                 <div className="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-blue-400/10 to-transparent opacity-20 animate-[shimmer_2s_infinite]" style={{ backgroundSize: '100% 200%' }}></div>
 
@@ -194,92 +194,99 @@ const ChatInput: React.FC<ChatInputProps> = ({
             </div>
         )}
 
-        <textarea
-          ref={textareaRef}
-          rows={1}
-          value={inputValue}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholderText}
-          className="w-full px-2 py-2 bg-transparent text-gray-200 placeholder-gray-500 focus:outline-none resize-none max-h-40 overflow-y-auto"
-          disabled={isLoading}
-        />
-        <div className="flex items-center justify-between mt-2">
-          <div className="flex items-center gap-1">
-              {/* Ellipsis/Controls Button */}
-              <button
-                onClick={() => setIsControlsSheetOpen(true)}
-                className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-gray-700/50 min-w-[44px] min-h-[44px] flex items-center justify-center"
-                title="More controls"
-              >
-                <CircleEllipsisIcon className="w-5 h-5" />
-              </button>
-              
-              {/* Model Selector Button (NEW) */}
-              <button
-                onClick={() => setIsModelSheetOpen(true)}
-                className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-gray-700/50 min-w-[44px] min-h-[44px] flex items-center justify-center"
-                title="Select Model"
-              >
-                <CpuIcon className="w-5 h-5" />
-              </button>
-
-              {/* Prompt Enhancer */}
-              <button 
-                onClick={handleEnhancePrompt}
-                disabled={isEnhancing || !inputValue.trim()}
-                className={`p-2 transition-colors rounded-full hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center ${isEnhanced ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`}
-                title="Enhance Prompt"
-              >
-                  {isEnhancing ? (
-                    <SpinnerIcon className="w-5 h-5 animate-spin text-blue-400" />
-                  ) : (
-                    <SparklesIcon className={`w-5 h-5 ${isEnhanced ? 'fill-yellow-400/20' : ''}`} />
-                  )}
-              </button>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {/* Plus Button */}
-            <button 
-                 onClick={handlePlusClick} 
-                 className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center"
-                >
-                  <PlusIcon className="w-5 h-5" />
-            </button>
-            <input 
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
-                accept="image/*, application/pdf, text/plain, text/csv, application/json, .js, .ts, .py, .html, .css, .md"
-                onChange={handleFileSelect}
+        {/* Inner Input Field Container */}
+        <div className="relative flex flex-col p-1.5 bg-[#1C1C1C] rounded-[24px] border border-gray-800 shadow-inner group focus-within:border-gray-600 focus-within:bg-[#222] transition-all duration-300">
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              value={inputValue}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder={placeholderText}
+              className="w-full px-4 py-3 bg-transparent text-gray-200 placeholder-gray-500 focus:outline-none resize-none max-h-40 overflow-y-auto text-base"
+              disabled={isLoading}
             />
+            
+            {/* Toolbar Row */}
+            <div className="flex items-center justify-between mt-1 px-1 pb-1">
+              <div className="flex items-center gap-1">
+                  {/* Ellipsis/Controls Button */}
+                  <button
+                    onClick={() => setIsControlsSheetOpen(true)}
+                    className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-gray-700/50 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                    title="More controls"
+                  >
+                    <CircleEllipsisIcon className="w-5 h-5" />
+                  </button>
+                  
+                  {/* Model Selector Button */}
+                  <button
+                    onClick={() => setIsModelSheetOpen(true)}
+                    className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-gray-700/50 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                    title="Select Model"
+                  >
+                    <CpuIcon className="w-5 h-5" />
+                  </button>
 
-            {/* Dynamic Voice/Send Button */}
-            <button
-                onClick={hasContent ? handleSend : onVoiceClick}
-                disabled={isLoading}
-                className={`p-2.5 rounded-full transition-all duration-300 transform min-w-[44px] min-h-[44px] flex items-center justify-center
-                    ${hasContent 
-                        ? 'bg-blue-600 text-white hover:bg-blue-500 hover:scale-105 shadow-lg shadow-blue-500/30' 
-                        : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
-                    } disabled:bg-gray-600 disabled:cursor-not-allowed disabled:shadow-none`}
-            >
-                <div className="relative w-5 h-5">
-                     <div className={`absolute inset-0 transition-all duration-300 ${hasContent ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-50'}`}>
-                         <SendIcon className="w-5 h-5" />
-                     </div>
-                     <div className={`absolute inset-0 transition-all duration-300 ${!hasContent ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 rotate-90 scale-50'}`}>
-                         <VoiceIcon className="w-5 h-5" />
-                     </div>
-                </div>
-            </button>
-          </div>
+                  {/* Prompt Enhancer */}
+                  <button 
+                    onClick={handleEnhancePrompt}
+                    disabled={isEnhancing || !inputValue.trim()}
+                    className={`p-2 transition-colors rounded-full hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed min-w-[40px] min-h-[40px] flex items-center justify-center ${isEnhanced ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`}
+                    title="Enhance Prompt"
+                  >
+                      {isEnhancing ? (
+                        <SpinnerIcon className="w-5 h-5 animate-spin text-blue-400" />
+                      ) : (
+                        <SparklesIcon className={`w-5 h-5 ${isEnhanced ? 'fill-yellow-400/20' : ''}`} />
+                      )}
+                  </button>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {/* Plus Button */}
+                <button 
+                     onClick={handlePlusClick} 
+                     className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed min-w-[40px] min-h-[40px] flex items-center justify-center"
+                    >
+                      <PlusIcon className="w-5 h-5" />
+                </button>
+                <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*, application/pdf, text/plain, text/csv, application/json, .js, .ts, .py, .html, .css, .md"
+                    onChange={handleFileSelect}
+                />
+
+                {/* Dynamic Voice/Send Button */}
+                <button
+                    onClick={hasContent ? handleSend : onVoiceClick}
+                    disabled={isLoading}
+                    className={`p-2.5 rounded-full transition-all duration-300 transform min-w-[42px] min-h-[42px] flex items-center justify-center
+                        ${hasContent 
+                            ? 'bg-blue-600 text-white hover:bg-blue-500 hover:scale-105 shadow-[0_0_15px_rgba(37,99,235,0.4)]' 
+                            : 'bg-gray-700/50 text-gray-400 hover:text-white hover:bg-gray-600'
+                        } disabled:bg-gray-800 disabled:cursor-not-allowed disabled:shadow-none`}
+                >
+                    <div className="relative w-5 h-5">
+                         <div className={`absolute inset-0 transition-all duration-300 ${hasContent ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-50'}`}>
+                             <SendIcon className="w-5 h-5" />
+                         </div>
+                         <div className={`absolute inset-0 transition-all duration-300 ${!hasContent ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 rotate-90 scale-50'}`}>
+                             <VoiceIcon className="w-5 h-5" />
+                         </div>
+                    </div>
+                </button>
+              </div>
+            </div>
         </div>
+        
+        <p className="text-center text-[10px] text-gray-600 mt-3 font-sans opacity-70">
+          © 2025 RIZCSTZ | Indonesian Inc.
+        </p>
+
       </div>
-      <p className="text-center text-xs text-gray-600 pt-2 font-sans">
-        © 2025 RIZCSTZ | Indonesian Inc.
-      </p>
 
       {/* Controls Bottom Sheet */}
       <ControlsBottomSheet

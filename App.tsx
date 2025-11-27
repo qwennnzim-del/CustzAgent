@@ -59,15 +59,15 @@ const AspectRatioControls: React.FC<{
 }> = ({ selected, onChange }) => {
   const aspectRatios: AspectRatio[] = ['1:1', '16:9', '9:16', '4:3', '3:4'];
   return (
-    <div className="flex flex-wrap justify-center gap-2 max-w-3xl mx-auto mb-3">
+    <div className="flex flex-wrap justify-center gap-2 max-w-3xl mx-auto mb-2">
         {aspectRatios.map(ratio => (
             <button
                 key={ratio}
                 onClick={() => onChange(ratio)}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                className={`px-3 py-1 text-xs font-medium rounded-full backdrop-blur-md transition-colors border ${
                     selected === ratio
-                        ? 'bg-gray-600 text-white'
-                        : 'bg-gray-800/60 text-gray-400 hover:bg-gray-700'
+                        ? 'bg-blue-600/80 text-white border-blue-500 shadow-[0_0_10px_rgba(37,99,235,0.5)]'
+                        : 'bg-black/40 text-gray-400 border-gray-700 hover:bg-gray-800'
                 }`}
             >
                 {ratio}
@@ -782,9 +782,11 @@ const App: React.FC = () => {
         />
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#0D0D0D] via-[#0D0D0D] to-transparent pt-10 pb-2 px-4 z-20">
+      <div className="fixed bottom-0 left-0 right-0 z-20 flex flex-col items-center">
         {(isImageModel) && (
-            <AspectRatioControls selected={aspectRatio} onChange={setAspectRatio} />
+            <div className="w-full mb-1">
+                <AspectRatioControls selected={aspectRatio} onChange={setAspectRatio} />
+            </div>
         )}
         <ChatInput 
             onSendMessage={handleSendMessage} 
