@@ -537,12 +537,11 @@ const App: React.FC = () => {
                 msg.id === botMessageId ? { ...msg, statusText: 'Rendering high-fidelity image...' } : msg
              ));
 
-             let response;
              let finalImageUrl: string | undefined = undefined;
 
              try {
                  // Try Imagen 4.0 First
-                 response = await aiClient.models.generateImages({
+                 const response = await aiClient.models.generateImages({
                     model: 'imagen-4.0-generate-001',
                     prompt: enhancedPrompt,
                     config: {
@@ -555,14 +554,15 @@ const App: React.FC = () => {
 
              } catch (imagenError) {
                  console.warn("Imagen 4.0 generation failed, attempting fallback...", imagenError);
-                 setMessages(prev => prev.map(msg => 
-                    msg.id === botMessageId ? { ...msg, statusText: 'Agent Imagen 4.0 unavailable. Falling back to Flash Image Engine...' } : msg
-                 ));
                  
-                 // Fallback to Gemini 2.5 Flash Image via generateContent (Native Generation)
+                 // Fallback 1: Gemini 2.0 Flash Exp (PRIORITY FALLBACK FOR FREE TIER)
                  try {
+                     setMessages(prev => prev.map(msg => 
+                        msg.id === botMessageId ? { ...msg, statusText: 'Agent Imagen 4.0 unavailable. Switching to Experimental Flash Engine...' } : msg
+                     ));
+
                      const fallbackResponse = await aiClient.models.generateContent({
-                        model: 'gemini-2.5-flash-image',
+                        model: 'gemini-2.0-flash-exp', // Experimental often has open quota
                         contents: { parts: [{ text: enhancedPrompt }] }
                      });
                      
@@ -575,11 +575,46 @@ const App: React.FC = () => {
                             }
                         }
                      }
-                     if (!finalImageUrl) throw new Error("Fallback engine returned no image.");
+                     if (!finalImageUrl) throw new Error("Experimental engine returned no image.");
 
-                 } catch (fallbackError: any) {
-                     // If both fail, throw specific error
-                      throw new Error(`Image Generation Failed. \n\nImagen 4.0 requires a paid/allowlisted API key. \nFallback Flash Engine error: ${fallbackError.message}`);
+                 } catch (fallback1Error: any) {
+                     console.warn("Fallback 1 failed", fallback1Error);
+                     
+                     // Fallback 2: Gemini 2.5 Flash Image (Last Resort)
+                     try {
+                         setMessages(prev => prev.map(msg => 
+                            msg.id === botMessageId ? { ...msg, statusText: 'Switching to Standard Flash Engine...' } : msg
+                         ));
+
+                         const fallback2Response = await aiClient.models.generateContent({
+                            model: 'gemini-2.5-flash-image',
+                            contents: { parts: [{ text: enhancedPrompt }] }
+                         });
+                         
+                         if (fallback2Response.candidates?.[0]?.content?.parts) {
+                            for (const part of fallback2Response.candidates[0].content.parts) {
+                                if (part.inlineData) {
+                                    const base64 = part.inlineData.data;
+                                    finalImageUrl = `data:${part.inlineData.mimeType};base64,${base64}`;
+                                    break;
+                                }
+                            }
+                         }
+                         if (!finalImageUrl) throw new Error("Standard engine returned no image.");
+
+                     } catch (fallback2Error: any) {
+                          // If ALL fail, throw a formatted text error that UI can display gracefully
+                          const errorDetails = fallback2Error?.message || fallback1Error?.message || imagenError?.message || "Unknown error";
+                          let friendlyError = "Image Generation Failed.\n\n";
+                          friendlyError += "All image generation models are currently restricted or have exceeded the free tier quota.\n\n";
+                          friendlyError += "**Status:**\n";
+                          friendlyError += "1. **Agent Imagen (Ultra)**: Paid Key Required.\n";
+                          friendlyError += "2. **Experimental Engine**: " + (errorDetails.includes('429') ? "Quota Exceeded." : "Not Available.") + "\n";
+                           friendlyError += "3. **Standard Engine**: " + (errorDetails.includes('429') ? "Quota Exceeded." : "Not Available.") + "\n\n";
+                          friendlyError += "*Tip: Please try again later, or enable Billing in your Google Cloud Project to access high-demand models.*";
+                          
+                          throw new Error(friendlyError);
+                     }
                  }
              }
              
@@ -715,12 +750,25 @@ const App: React.FC = () => {
         }
     } catch (error: any) {
       console.error("Generation error:", error);
+      
+      // Improve Error Display in UI
+      let displayError = error.message || "Unknown error occurred.";
+      if (displayError.includes('{')) {
+          // If it looks like JSON (like the one user pasted), try to parse a readable message
+          try {
+             // Just take the first meaningful line if it's too long
+             if (displayError.length > 200 && !displayError.includes("Image Generation Failed")) {
+                 displayError = "System Error: The request failed. " + (displayError.includes('429') ? "Quota exceeded." : "Please check your connection or API key.");
+             }
+          } catch (e) {}
+      }
+
       setMessages(prev => prev.map(msg => {
         if (msg.id === botMessageId) {
             return {
                 ...msg,
                 isStreaming: false,
-                text: `⚠️ **System Error:** ${error.message || "Unknown error occurred."}\n\n*Note: Image generation or advanced features may require a billed API key or are currently restricted in your region.*`
+                text: `⚠️ **System Alert**\n\n${displayError}\n\n*Note: Advanced features like Image Generation often require a paid Google Cloud Project.*`
             };
         }
         return msg;
