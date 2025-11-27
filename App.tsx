@@ -801,6 +801,14 @@ const App: React.FC = () => {
     initializeChat();
   };
 
+  const handleClearHistory = () => {
+     if (window.confirm("⚠️ Irreversible Action\n\nAre you sure you want to delete ALL chat history? This cannot be undone.")) {
+        setChatHistory([]);
+        localStorage.removeItem('chatHistory');
+        handleNewChat();
+     }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-[#0D0D0D] text-white relative overflow-hidden font-sans">
       {/* Live Neural Background - Added here */}
@@ -813,6 +821,7 @@ const App: React.FC = () => {
         onLoadChat={handleLoadChat}
         onNewChat={handleNewChat}
         activeChatId={activeChatId}
+        onClearHistory={handleClearHistory}
       />
       
       <Header 
