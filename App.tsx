@@ -105,6 +105,7 @@ const App: React.FC = () => {
 
   const chatModels = ['gemini-2.5-flash', 'gemini-3-pro-preview', 'gemini-flash-lite-latest', 'gemini-1.5-flash'];
   const isChatModel = chatModels.includes(model);
+  const isImageGenModel = model === 'imagen-4.0-generate-001' || model === 'imagen-4.0-fast-generate-001';
 
   // Geolocation setup
   useEffect(() => {
@@ -448,7 +449,7 @@ const App: React.FC = () => {
         statusText: 'Initializing...',
         thinkingText: '',
         isThinkingMode: shouldUseThinkingMode, // Trigger the box immediately
-        ...((model === 'imagen-4.0-generate-001') && { aspectRatio: aspectRatio })
+        ...(isImageGenModel && { aspectRatio: aspectRatio })
     };
 
     setMessages(prev => [...prev, userMessage, initialBotMessage]);
@@ -519,9 +520,9 @@ const App: React.FC = () => {
             if (imageUrl) setLastGeneratedImage(imageUrl);
 
         } 
-        else if (model === 'imagen-4.0-generate-001') {
+        else if (isImageGenModel) {
              setMessages(prev => prev.map(msg => 
-                msg.id === botMessageId ? { ...msg, statusText: 'Optimizing prompt for Ultra Quality (8k)...' } : msg
+                msg.id === botMessageId ? { ...msg, statusText: 'Optimizing prompt for Agent Quality...' } : msg
              ));
 
              let enhancedPrompt = text;
@@ -549,10 +550,16 @@ const App: React.FC = () => {
 
              let finalImageUrl: string | undefined = undefined;
 
+             // CASCADING FALLBACK STRATEGY
+             // 1. Try Selected Model (Imagen 4.0 Ultra or Fast)
+             // 2. Try Imagen 4.0 Fast (if Ultra failed)
+             // 3. Try Gemini 2.0 Flash Exp (Free fallback)
+             // 4. Try Gemini 2.5 Flash Image (User requested fallback)
+             
              try {
-                 // Try Imagen 4.0 First
+                 // ATTEMPT 1: Selected Model
                  const response = await aiClient.models.generateImages({
-                    model: 'imagen-4.0-generate-001',
+                    model: model, // Use the actual selected model (4.0-generate or 4.0-fast-generate)
                     prompt: enhancedPrompt,
                     config: {
                         numberOfImages: 1,
@@ -562,69 +569,83 @@ const App: React.FC = () => {
                  const base64 = response.generatedImages?.[0]?.image?.imageBytes;
                  finalImageUrl = base64 ? `data:image/png;base64,${base64}` : undefined;
 
-             } catch (imagenError) {
-                 console.warn("Imagen 4.0 generation failed, attempting fallback...", imagenError);
+             } catch (attempt1Error) {
+                 console.warn(`Attempt 1 (${model}) failed:`, attempt1Error);
                  
-                 // Fallback 1: Gemini 2.0 Flash Exp (PRIORITY FALLBACK FOR FREE TIER)
-                 try {
-                     setMessages(prev => prev.map(msg => 
-                        msg.id === botMessageId ? { ...msg, statusText: 'Agent Imagen 4.0 unavailable. Switching to Experimental Flash Engine...' } : msg
-                     ));
-
-                     const fallbackResponse = await aiClient.models.generateContent({
-                        model: 'gemini-2.0-flash-exp', // Experimental often has open quota
-                        contents: { parts: [{ text: enhancedPrompt }] }
-                     });
-                     
-                     if (fallbackResponse.candidates?.[0]?.content?.parts) {
-                        for (const part of fallbackResponse.candidates[0].content.parts) {
-                            if (part.inlineData) {
-                                const base64 = part.inlineData.data;
-                                finalImageUrl = `data:${part.inlineData.mimeType};base64,${base64}`;
-                                break;
+                 // ATTEMPT 2: Try Imagen 4.0 Fast (If not already tried)
+                 if (model === 'imagen-4.0-generate-001') {
+                    try {
+                        setMessages(prev => prev.map(msg => 
+                           msg.id === botMessageId ? { ...msg, statusText: 'Ultra unavailable. Switching to Agent Fast Engine...' } : msg
+                        ));
+                        
+                        const response = await aiClient.models.generateImages({
+                            model: 'imagen-4.0-fast-generate-001',
+                            prompt: enhancedPrompt,
+                            config: {
+                                numberOfImages: 1,
+                                aspectRatio: aspectRatio
                             }
-                        }
-                     }
-                     if (!finalImageUrl) throw new Error("Experimental engine returned no image.");
+                        });
+                        const base64 = response.generatedImages?.[0]?.image?.imageBytes;
+                        finalImageUrl = base64 ? `data:image/png;base64,${base64}` : undefined;
+                        
+                    } catch (e) {
+                         console.warn("Attempt 2 (Fast) failed", e);
+                    }
+                 }
 
-                 } catch (fallback1Error: any) {
-                     console.warn("Fallback 1 failed", fallback1Error);
-                     
-                     // Fallback 2: Gemini 2.5 Flash Image (Last Resort)
-                     try {
-                         setMessages(prev => prev.map(msg => 
-                            msg.id === botMessageId ? { ...msg, statusText: 'Switching to Standard Flash Engine...' } : msg
-                         ));
-
-                         const fallback2Response = await aiClient.models.generateContent({
-                            model: 'gemini-2.5-flash-image',
+                 // ATTEMPT 3: Gemini 2.0 Flash Exp (Reliable Free Fallback)
+                 if (!finalImageUrl) {
+                    try {
+                        setMessages(prev => prev.map(msg => 
+                            msg.id === botMessageId ? { ...msg, statusText: 'Imagen unavailable. Switching to Agent Flash 2.0 (Exp)...' } : msg
+                        ));
+                        const fallbackResponse = await aiClient.models.generateContent({
+                            model: 'gemini-2.0-flash-exp', 
                             contents: { parts: [{ text: enhancedPrompt }] }
-                         });
-                         
-                         if (fallback2Response.candidates?.[0]?.content?.parts) {
-                            for (const part of fallback2Response.candidates[0].content.parts) {
+                        });
+                        if (fallbackResponse.candidates?.[0]?.content?.parts) {
+                            for (const part of fallbackResponse.candidates[0].content.parts) {
                                 if (part.inlineData) {
                                     const base64 = part.inlineData.data;
                                     finalImageUrl = `data:${part.inlineData.mimeType};base64,${base64}`;
                                     break;
                                 }
                             }
-                         }
-                         if (!finalImageUrl) throw new Error("Standard engine returned no image.");
+                        }
+                    } catch (e) {
+                         console.warn("Attempt 3 (Flash 2.0 Exp) failed", e);
+                    }
+                 }
+                 
+                 // ATTEMPT 4: Gemini 2.5 Flash Image (User Request)
+                 if (!finalImageUrl) {
+                    try {
+                        setMessages(prev => prev.map(msg => 
+                            msg.id === botMessageId ? { ...msg, statusText: 'Switching to Agent Flash 2.5 Image...' } : msg
+                        ));
+                        const fallbackResponse = await aiClient.models.generateContent({
+                            model: 'gemini-2.5-flash-image', 
+                            contents: { parts: [{ text: enhancedPrompt }] }
+                        });
+                        if (fallbackResponse.candidates?.[0]?.content?.parts) {
+                            for (const part of fallbackResponse.candidates[0].content.parts) {
+                                if (part.inlineData) {
+                                    const base64 = part.inlineData.data;
+                                    finalImageUrl = `data:${part.inlineData.mimeType};base64,${base64}`;
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (e) {
+                         console.warn("Attempt 4 (Flash 2.5 Image) failed", e);
+                    }
+                 }
 
-                     } catch (fallback2Error: any) {
-                          // If ALL fail, throw a formatted text error that UI can display gracefully
-                          const errorDetails = fallback2Error?.message || fallback1Error?.message || imagenError?.message || "Unknown error";
-                          let friendlyError = "Image Generation Failed.\n\n";
-                          friendlyError += "All image generation models are currently restricted or have exceeded the free tier quota.\n\n";
-                          friendlyError += "**Status:**\n";
-                          friendlyError += "1. **Agent Imagen (Ultra)**: Paid Key Required.\n";
-                          friendlyError += "2. **Experimental Engine**: " + (errorDetails.includes('429') ? "Quota Exceeded." : "Not Available.") + "\n";
-                           friendlyError += "3. **Standard Engine**: " + (errorDetails.includes('429') ? "Quota Exceeded." : "Not Available.") + "\n\n";
-                          friendlyError += "*Tip: Please try again later, or enable Billing in your Google Cloud Project to access high-demand models.*";
-                          
-                          throw new Error(friendlyError);
-                     }
+                 if (!finalImageUrl) {
+                      // FINAL ERROR if all attempts fail
+                      throw new Error("All image generation protocols failed. Please check Quota or Billing.");
                  }
              }
              
@@ -764,9 +785,7 @@ const App: React.FC = () => {
       // Improve Error Display in UI
       let displayError = error.message || "Unknown error occurred.";
       if (displayError.includes('{')) {
-          // If it looks like JSON (like the one user pasted), try to parse a readable message
           try {
-             // Just take the first meaningful line if it's too long
              if (displayError.length > 200 && !displayError.includes("Image Generation Failed")) {
                  displayError = "System Error: The request failed. " + (displayError.includes('429') ? "Quota exceeded." : "Please check your connection or API key.");
              }
@@ -852,7 +871,7 @@ const App: React.FC = () => {
       </main>
 
       <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#0D0D0D] via-[#0D0D0D] to-transparent pt-10 pb-2 px-4 z-20">
-        {(model === 'imagen-4.0-generate-001') && (
+        {(isImageGenModel) && (
             <AspectRatioControls selected={aspectRatio} onChange={setAspectRatio} />
         )}
         <ChatInput 
@@ -863,7 +882,7 @@ const App: React.FC = () => {
             stagedFile={stagedFile}
             clearStagedFile={handleClearStagedFile}
             model={model}
-            onModelChange={handleModelChange} // Added prop
+            onModelChange={handleModelChange} 
             isSearchEnabled={isSearchEnabled}
             onToggleSearch={() => {
                 setIsSearchEnabled(!isSearchEnabled);
